@@ -1,0 +1,5 @@
+{
+  "typeCheckingMode": "basic",
+  "reportMissingTypeStubs": "none",
+  "reportAttributeAccessIssue": "none"
+}
