@@ -1,0 +1,190 @@
+{
+  "info": {
+    "_postman_id": "60b5b2b0-6f7b-4cf3-9e5b-f8d04d7dbe11",
+    "name": "Django Referral System API",
+    "description": "Phone-number authentication and referral workflow for the Django Referral System.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000/api",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "phone_number",
+      "value": "+79991234567",
+      "type": "string"
+    },
+    {
+      "key": "verify_code",
+      "value": "1234",
+      "type": "string"
+    },
+    {
+      "key": "invite_code_sample",
+      "value": "ABCDEF",
+      "type": "string"
+    }
+  ],
+
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Request Auth Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/request-code/",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "request-code", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_number\": \"{{phone_number}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => pm.response.code === 200);",
+                  "// Save dev_code (only present with DEBUG=True) just in case:",
+                  "try {",
+                  "  const devCode = pm.response.json().dev_code;",
+                  "  if (devCode) pm.collectionVariables.set(\"verify_code\", devCode);",
+                  "} catch(e) {}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+
+        {
+          "name": "Verify Code / Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/verify-code/",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "verify-code", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_number\": \"{{phone_number}}\",\n  \"code\": \"{{verify_code}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => pm.response.code === 200);",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set(\"auth_token\", json.token);",
+                  "pm.collectionVariables.set(\"invite_code_sample\", json.user.invite_code);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      "name": "Profile",
+      "item": [
+        {
+          "name": "Get Profile",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const token = pm.collectionVariables.get(\"auth_token\");",
+                  "pm.request.headers.upsert({key: 'Authorization', value: `Token ${token}`});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => pm.response.code === 200);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/profile/",
+              "host": ["{{base_url}}"],
+              "path": ["profile", ""]
+            }
+          }
+        },
+
+        {
+          "name": "Activate Invite Code",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const token = pm.collectionVariables.get(\"auth_token\");",
+                  "pm.request.headers.upsert({key: 'Authorization', value: `Token ${token}`});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => pm.response.code === 200);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/profile/",
+              "host": ["{{base_url}}"],
+              "path": ["profile", ""]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invite_code\": \"{{invite_code_sample}}\"\n}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

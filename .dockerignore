@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtualenv
+venv/
+ENV/
+.env/
+*.env
+# Git
+.git/
+.gitignore
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Collected static
+static/
