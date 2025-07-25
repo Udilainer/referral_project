@@ -1,52 +1,52 @@
+from __future__ import annotations
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from typing import TypeVar
-
-UserType = TypeVar("UserType", bound="User")
 
 
-class UserManager(BaseUserManager[UserType]):
+class UserManager(BaseUserManager["User"]):
     use_in_migrations = True
 
-    def _create_user(self, phone_number: str, password: str | None, **extra_fields):
+    def _create_user(self, phone_number: str, password: str | None, **extra):
         if not phone_number:
-            raise ValueError("The phone number must be set")
-
-        user = self.model(phone_number=phone_number, **extra_fields)
+            raise ValueError("Phone number must be set")
+        user = self.model(phone_number=phone_number, **extra)
         user.set_password(password)
         user.save(using=self._db)
         return user
 
-    def create_user(
-        self, phone_number: str, password: str | None = None, **extra_fields
-    ):
-        extra_fields.setdefault("is_staff", False)
-        extra_fields.setdefault("is_superuser", False)
-        return self._create_user(phone_number, password, **extra_fields)
+    def create_user(self, phone_number: str, password: str | None = None, **extra):
+        extra.setdefault("is_staff", False)
+        extra.setdefault("is_superuser", False)
+        return self._create_user(phone_number, password, **extra)
 
-    def create_superuser(
-        self, phone_number: str, password: str | None = None, **extra_fields
-    ):
-        extra_fields.setdefault("is_staff", True)
-        extra_fields.setdefault("is_superuser", True)
+    def create_superuser(self, phone_number: str, password: str | None = None, **extra):
+        extra.setdefault("is_staff", True)
+        extra.setdefault("is_superuser", True)
 
-        if extra_fields.get("is_staff") is not True:
+        if extra.get("is_staff") is not True:
             raise ValueError("Superuser must have is_staff=True.")
-        if extra_fields.get("is_superuser") is not True:
+        if extra.get("is_superuser") is not True:
             raise ValueError("Superuser must have is_superuser=True.")
 
-        return self._create_user(phone_number, password, **extra_fields)
+        return self._create_user(phone_number, password, **extra)
 
 
 class User(AbstractUser):
-    username = None
+    username = models.CharField(
+        _("username"),
+        max_length=150,
+        blank=True,
+        null=True,
+        unique=False,
+        help_text=_("Not used for authentication; kept for compatibility."),
+    )
 
     phone_number = models.CharField(
         _("phone number"),
         max_length=15,
         unique=True,
-        help_text=_("User's mobile phone number (international format)"),
+        help_text=_("Primary identifier."),
     )
 
     invite_code = models.CharField(
@@ -55,7 +55,7 @@ class User(AbstractUser):
         unique=True,
         null=True,
         blank=True,
-        help_text=_("Unique 6-character code this user can give to others"),
+        help_text=_("User's own 6-char invite code."),
     )
     activated_invite_code = models.ForeignKey(
         "self",
@@ -63,14 +63,13 @@ class User(AbstractUser):
         null=True,
         blank=True,
         related_name="referrals",
-        help_text=_("User whose invite code this user has activated"),
+        help_text=_("Referrer whose code was activated."),
     )
 
-    objects: UserManager["User"] = UserManager()
+    USERNAME_FIELD = "phone_number"
     REQUIRED_FIELDS: list[str] = []
 
-    # Attach the custom manager
-    objects = UserManager()
+    objects: "UserManager" = UserManager()
 
     class Meta:
         verbose_name = _("user")
