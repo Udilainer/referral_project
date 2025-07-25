@@ -18,7 +18,7 @@
 - Токенная авторизация (DRF Token)
 - Чистый код с поддержкой type hints (Pylance friendly)
 - Docker-окружение (PostgreSQL + Redis)
-- Postman-коллекция в репозитории
+- Postman-коллекция в репозитории (коллекция + environment)
 
 ---
 
@@ -40,7 +40,7 @@ Python 3.10+, PostgreSQL 12+, Redis, Git
 ### 1. Клонируем
 ```bash
 git clone https://github.com/Udilainer/referral_project.git
-cd referral-system
+cd referral_system
 ```
 
 ### 2. Виртуальное окружение
@@ -187,26 +187,79 @@ POSTGRES_PASSWORD=${DATABASE_PASSWORD}
 
 ---
 
-## Тестирование
+## Быстрое тестирование API (live-версия)
 
-### Postman
-1. Импортируйте `postman_collection.json`.  
-2. «Request Code» → копируйте `dev_code`.  
-3. «Verify Code» сохраняет `auth_token` в переменную коллекции.  
-4. «Get Profile» / «Activate Invite Code» работают автоматически.
+Ниже описаны два способа проверить весь реферальный флоу менее чем за две минуты.
 
-### curl
+---
+
+### Вариант A · Postman (рекомендуется)
+
+1. Импортируйте  
+   * **`referral_demo_environment.json`**  
+   * **`referral_demo_collection.json`**
+2. Выберите окружение **«Referral-Demo-Live»**  
+   (`base_url` уже указывает на  
+   `https://udilainer.pythonanywhere.com/api`).
+
+3. Нажмите запросы в указанном порядке:
+
+| № | Папка / Запрос                              | Ожидаемый результат                                  |
+|---|---------------------------------------------|------------------------------------------------------|
+| 1 | `Authentication → Request Auth Code`        | возвращает `dev_code = 1234`, сохраняет его          |
+| 2 | `Authentication → Verify Code / Login`      | логинит **User A**; сохраняет `auth_token`, `invite_code_sample` |
+| 3 | Измените переменную **phone_number** на второй номер (напр. `+15550222222`) |
+| 4 | Повторите шаги 1–2 — теперь создан **User B**, а `invite_code_sample = code_B` |
+| 5 | Верните **auth_token** к токену **User A** (вкладка `Variables`, вставьте `token_A`) |
+| 6 | `Profile → Get Profile`                     | 200 OK, `activated_invite_code = null`               |
+| 7 | `Profile → Activate Invite Code`            | 200 OK, активирует **code_B** для User A             |
+| 8 | `Profile → Get Profile`                     | теперь `activated_invite_code = +15550222222`        |
+
+Все заголовки выставляются скриптами; вручную ничего копировать не нужно.
+
+---
+
+### Вариант B · curl (CLI)
+
 ```bash
-TOKEN=… # ваш токен
+# Базовый URL
+BASE="https://udilainer.pythonanywhere.com/api"
 
-curl -H "Authorization: Token $TOKEN" http://localhost:8000/api/profile/
+# ---------- 1.  USER A ----------
+curl -X POST -H "Content-Type: application/json" \
+     -d '{"phone_number":"+15550111111"}' \
+     $BASE/auth/request-code/
+
+curl -X POST -H "Content-Type: application/json" \
+     -d '{"phone_number":"+15550111111","code":"1234"}' \
+     $BASE/auth/verify-code/
+# сохраните token_A и invite_code_A
+
+# ---------- 2.  USER B ----------
+curl -X POST -H "Content-Type: application/json" \
+     -d '{"phone_number":"+15550222222"}' \
+     $BASE/auth/request-code/
+
+curl -X POST -H "Content-Type: application/json" \
+     -d '{"phone_number":"+15550222222","code":"1234"}' \
+     $BASE/auth/verify-code/
+# сохраните invite_code_B, например "X9Y8Z7"
+
+# ---------- 3.  Активация кода B для A ----------
+TOKEN=token_A      # вставьте токен A (без префикса "Token ")
+CODE_B=X9Y8Z7      # 6-символьный код пользователя B
+
+curl -X POST \
+     -H "Authorization: Token $TOKEN" \
+     -H "Content-Type: application/json" \
+     -d "{\"invite_code\":\"$CODE_B\"}" \
+     $BASE/profile/
 ```
-
 ---
 ## Развертывание
 
-**Docker Compose (рекомендуется)**
-```txt
+### Docker Compose (рекомендуется)
+```Bash
 docker-compose up --build -d
 ```
 Запустите миграции внутри веб-контейнера:
