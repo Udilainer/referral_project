@@ -208,12 +208,12 @@ POSTGRES_PASSWORD=${DATABASE_PASSWORD}
 |---|---------------------------------------------|------------------------------------------------------|
 | 1 | `Authentication → Request Auth Code`        | возвращает `dev_code = 1234`, сохраняет его          |
 | 2 | `Authentication → Verify Code / Login`      | логинит **User A**; сохраняет `auth_token`, `invite_code_sample` |
-| 3 | Измените переменную **phone_number** на второй номер (напр. `++79998886654`) |
+| 3 | Измените переменную **phone_number** на второй номер (напр. `+79998886654`) |
 | 4 | Повторите шаги 1–2 — теперь создан **User B**, а `invite_code_sample = code_B` |
 | 5 | Верните **auth_token** к токену **User A** (вкладка `Variables`, вставьте `token_A`) |
 | 6 | `Profile → Get Profile`                     | 200 OK, `activated_invite_code = null`               |
 | 7 | `Profile → Activate Invite Code`            | 200 OK, активирует **code_B** для User A             |
-| 8 | `Profile → Get Profile`                     | теперь `activated_invite_code = ++79998886654`        |
+| 8 | `Profile → Get Profile`                     | теперь `activated_invite_code = +79998886654`        |
 
 Все заголовки выставляются скриптами; вручную ничего копировать не нужно.
 
@@ -227,11 +227,11 @@ BASE="https://udilainer.pythonanywhere.com/api"
 
 # ---------- 1.  USER A ----------
 curl -X POST -H "Content-Type: application/json" \
-     -d '{"phone_number":"++79998886654"}' \
+     -d '{"phone_number":"+79998886654"}' \
      $BASE/auth/request-code/
 
 curl -X POST -H "Content-Type: application/json" \
-     -d '{"phone_number":"++79998886654","code":"1234"}' \
+     -d '{"phone_number":"+79998886654","code":"1234"}' \
      $BASE/auth/verify-code/
 # сохраните token_A и invite_code_A
 
